@@ -6,6 +6,7 @@
 #include <random>
 #include <chrono>
 #include <string>
+#include <climits>
 
 using namespace std;
 
@@ -28,10 +29,19 @@ PFSPInstance readInstance(const string& filename) {
     file >> instance.numJobs >> instance.numMachines;
 
     instance.processingTimes.resize(instance.numJobs, vector<int>(instance.numMachines));
-    
+
     for (int i = 0; i < instance.numJobs; ++i) {
         for (int j = 0; j < instance.numMachines; ++j) {
-            file >> instance.processingTimes[i][j];
+            int machine_id, processing_time;
+            file >> machine_id >> processing_time;
+
+            // Optionnel : vérifie que machine_id == j+1
+            if (machine_id != j + 1) {
+                cerr << "Erreur: identifiant de machine inattendu à la ligne " << i + 2 << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            instance.processingTimes[i][j] = processing_time;
         }
     }
 
@@ -51,119 +61,242 @@ vector<int> generateRandomPermutation(int n) {
 // Heuristique Simplifiée RZ
 vector<int> generateSRZPermutation(const PFSPInstance& instance) {
     int n = instance.numJobs;
-    vector<pair<int, int>> jobSum; // (somme des temps, index du job)
+    int m = instance.numMachines;
 
-    // Calcul de la somme des temps de traitement pour chaque job
+    // Étape 1 : Calcul de la somme des temps pour chaque job
+    vector<pair<int, int>> jobSum; // (somme, index)
     for (int i = 0; i < n; ++i) {
         int sum = accumulate(instance.processingTimes[i].begin(), instance.processingTimes[i].end(), 0);
         jobSum.emplace_back(sum, i);
     }
 
-    // Trier les jobs en ordre croissant de leur somme de temps de traitement
-    sort(jobSum.begin(), jobSum.end());
+    // Étape 2 : Tri stable des jobs selon leur somme de temps de traitement
+    std::stable_sort(jobSum.begin(), jobSum.end());
 
-    // Construire la solution en insérant chaque job à la meilleure position
+    // Étape 3 : Construction de la permutation par insertion incrémentale
     vector<int> solution;
-    for (auto& job : jobSum) {
+
+    for (const auto& job : jobSum) {
         int jobIndex = job.second;
         int bestPos = 0;
-        int bestCompletionTime = INT_MAX;
+        int bestCompletion = INT_MAX;
 
+        // Tester chaque position possible dans la solution actuelle
         for (size_t pos = 0; pos <= solution.size(); ++pos) {
-            vector<int> tempSolution = solution;
-            tempSolution.insert(tempSolution.begin() + pos, jobIndex);
+            vector<int> temp = solution;
+            temp.insert(temp.begin() + pos, jobIndex);
 
-            int completionTime = 0;
-            vector<vector<int>> completion(instance.numJobs, vector<int>(instance.numMachines, 0));
+            // Calcul du coût (somme des C_i)
+            vector<int> machineTime(m, 0);
+            int totalCompletion = 0;
 
-            completion[0][0] = instance.processingTimes[tempSolution[0]][0];
-            for (int j = 1; j < instance.numMachines; ++j)
-                completion[0][j] = completion[0][j - 1] + instance.processingTimes[tempSolution[0]][j];
-
-            for (size_t i = 1; i < tempSolution.size(); ++i) {
-                completion[i][0] = completion[i - 1][0] + instance.processingTimes[tempSolution[i]][0];
-                for (int j = 1; j < instance.numMachines; ++j)
-                    completion[i][j] = max(completion[i - 1][j], completion[i][j - 1]) + instance.processingTimes[tempSolution[i]][j];
+            for (size_t i = 0; i < temp.size(); ++i) {
+                int jID = temp[i];
+                machineTime[0] += instance.processingTimes[jID][0];
+                for (int j = 1; j < m; ++j) {
+                    machineTime[j] = max(machineTime[j], machineTime[j - 1]) + instance.processingTimes[jID][j];
+                }
+                totalCompletion += machineTime[m - 1];
             }
 
-            completionTime = completion[tempSolution.size() - 1][instance.numMachines - 1];
-
-            if (completionTime < bestCompletionTime) {
-                bestCompletionTime = completionTime;
+            if (totalCompletion < bestCompletion) {
+                bestCompletion = totalCompletion;
                 bestPos = pos;
             }
         }
 
+        // Insérer définitivement le job à la meilleure position
         solution.insert(solution.begin() + bestPos, jobIndex);
     }
 
     return solution;
 }
 
+
 // Calcul de la fonction coût (somme des temps de fin de traitement)
 int computeCompletionTime(const PFSPInstance& instance, const vector<int>& permutation) {
-    int numJobs = instance.numJobs;
-    int numMachines = instance.numMachines;
-    
-    vector<vector<int>> completionTime(numJobs, vector<int>(numMachines, 0));
+    int n = instance.numJobs;
+    int m = instance.numMachines;
 
-    // Remplissage de la première machine
-    completionTime[0][0] = instance.processingTimes[permutation[0]][0];
-    for (int j = 1; j < numMachines; ++j) {
-        completionTime[0][j] = completionTime[0][j-1] + instance.processingTimes[permutation[0]][j];
+    vector<int> machineTime(m, 0);  // machineTime[j] = temps sur la machine j après le dernier job
+    int totalCompletionTime = 0;
+
+    for (int i = 0; i < n; ++i) {
+        int job = permutation[i];
+
+        // première machine
+        machineTime[0] += instance.processingTimes[job][0];
+
+        // les autres machines
+        for (int j = 1; j < m; ++j) {
+            machineTime[j] = max(machineTime[j], machineTime[j - 1]) + instance.processingTimes[job][j];
+        }
+
+        // le C_i du job i est le temps sur la dernière machine
+        totalCompletionTime += machineTime[m - 1];
     }
 
-    // Remplissage des autres machines
-    for (int i = 1; i < numJobs; ++i) {
-        completionTime[i][0] = completionTime[i-1][0] + instance.processingTimes[permutation[i]][0];
-        for (int j = 1; j < numMachines; ++j) {
-            completionTime[i][j] = max(completionTime[i-1][j], completionTime[i][j-1]) + instance.processingTimes[permutation[i]][j];
+    return totalCompletionTime;
+}
+
+
+//localSearch_first_improvement() avec gestion dynamique du voisinage (transpose, exchange, insert)
+vector<int> localSearch_first_improvement(const PFSPInstance& instance, vector<int> permutation, const string& neighborhood) {
+    int n = instance.numJobs;
+    bool improved = true;
+
+    while (improved) {
+        improved = false;
+        int currentCost = computeCompletionTime(instance, permutation);
+
+        for (int i = 0; i < n && !improved; ++i) {
+            for (int j = 0; j < n && !improved; ++j) {
+                if (i == j) continue; //évite les comparaisons inutiles.
+
+                vector<int> neighbor = permutation;
+
+                if (neighborhood == "exchange" && i < j) {  // échange les jobs i et j
+                    swap(neighbor[i], neighbor[j]);
+                } 
+                else if (neighborhood == "transpose" && j == i + 1) { // échange deux jobs adjacents i et i+1
+                    swap(neighbor[i], neighbor[j]);
+                } 
+                else if (neighborhood == "insert") {    // déplace un job i vers une autre position j
+                    int job = neighbor[i];
+                    neighbor.erase(neighbor.begin() + i);
+                    neighbor.insert(neighbor.begin() + j, job);
+                } 
+                else {
+                    continue; // on ignore les paires invalides selon le voisinage
+                }
+
+                int newCost = computeCompletionTime(instance, neighbor);
+                if (newCost < currentCost) {
+                    permutation = neighbor;
+                    improved = true;
+                }
+            }
         }
     }
 
-    return completionTime[numJobs-1][numMachines-1]; // Retourne le temps d'achèvement total
+    return permutation;
 }
+
+
+vector<int> localSearch_best_improvement(const PFSPInstance& instance, vector<int> permutation, const string& neighborhood) {
+    int n = instance.numJobs;
+    bool improved = true;
+
+    while (improved) {
+        improved = false;
+        int currentCost = computeCompletionTime(instance, permutation);
+
+        vector<int> bestNeighbor = permutation;
+        int bestCost = currentCost;
+
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (i == j) continue;
+
+                vector<int> neighbor = permutation;
+
+                if (neighborhood == "exchange" && i < j) {
+                    swap(neighbor[i], neighbor[j]);
+                } 
+                else if (neighborhood == "transpose" && j == i + 1) {
+                    swap(neighbor[i], neighbor[j]);
+                } 
+                else if (neighborhood == "insert") {
+                    int job = neighbor[i];
+                    neighbor.erase(neighbor.begin() + i);
+                    neighbor.insert(neighbor.begin() + j, job);
+                } 
+                else {
+                    continue;
+                }
+
+                int newCost = computeCompletionTime(instance, neighbor);
+                if (newCost < bestCost) {
+                    bestCost = newCost;
+                    bestNeighbor = neighbor;
+                }
+            }
+        }
+
+        // Si on a trouvé un voisin meilleur, on l'adopte
+        if (bestCost < currentCost) {
+            permutation = bestNeighbor;
+            improved = true;
+        }
+    }
+
+    return permutation;
+}
+
 
 // Fonction principale pour tester la lecture et la génération
 int main(int argc, char* argv[]) {
     string pivoting_rule = "first";
     string neighborhood = "transpose";
     string init_method = "random";
+    string filename = "";
 
-    // Lire les arguments de la ligne de commande
+    // Parcourir tous les arguments
     for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
 
         if (arg == "--first") pivoting_rule = "first";
-        if (arg == "--best") pivoting_rule = "best";
-        if (arg == "--transpose") neighborhood = "transpose";
-        if (arg == "--exchange") neighborhood = "exchange";
-        if (arg == "--insert") neighborhood = "insert";
-        if (arg == "--random-init") init_method = "random";
-        if (arg == "--srz") init_method = "srz";
+        else if (arg == "--best") pivoting_rule = "best";
+        else if (arg == "--transpose") neighborhood = "transpose";
+        else if (arg == "--exchange") neighborhood = "exchange";
+        else if (arg == "--insert") neighborhood = "insert";
+        else if (arg == "--random-init") init_method = "random";
+        else if (arg == "--srz") init_method = "srz";
+        else if (arg[0] != '-') filename = arg; // Si ce n’est pas une option, on suppose que c’est le fichier d’instance
     }
 
+    // Vérifier que le fichier a bien été spécifié
+    if (filename.empty()) {
+        cerr << "Erreur: Veuillez spécifier un fichier d'instance." << endl;
+        return EXIT_FAILURE;
+    }
+
+    // Afficher la configuration
     cout << "Configuration choisie : " << endl;
+    cout << " - Fichier instance : " << filename << endl;
     cout << " - Pivotement : " << pivoting_rule << endl;
     cout << " - Voisinage : " << neighborhood << endl;
     cout << " - Méthode d'initialisation : " << init_method << endl;
-
-    if (argc < 2) {
-        cerr << "Utilisation: " << argv[0] << " <fichier_instance>" << endl;
-        return EXIT_FAILURE;
-    }
 
     PFSPInstance instance = readInstance(argv[1]);
 
     cout << "Instance chargée : " << instance.numJobs << " jobs, " << instance.numMachines << " machines." << endl;
 
-    // Génération d'une permutation aléatoire
-    vector<int> permutation = generateRandomPermutation(instance.numJobs);
-    cout << "Permutation aléatoire : ";
-    for (int job : permutation) {
-        cout << job << " ";
+    vector<int> permutation;
+    if (init_method == "random") {
+        permutation = generateRandomPermutation(instance.numJobs);
+    } else if (init_method == "srz") {
+        permutation = generateSRZPermutation(instance);
+    } else {
+        cerr << "Erreur: méthode d'initialisation inconnue." << endl;
+        return EXIT_FAILURE;
     }
-    cout << endl;
+
+    //// Print Permutation
+    //cout << "Permutation " << init_method << " : ";
+    //for (int job : permutation) {
+    //    cout << job << " ";
+    //}
+    //cout << endl;
+
+    if (pivoting_rule == "first") {
+        permutation = localSearch_first_improvement(instance, permutation, neighborhood);
+    } else if (pivoting_rule == "best") {
+        permutation = localSearch_best_improvement(instance, permutation, neighborhood);
+    }
+    
+    
+    
 
     // Calcul du temps d'achèvement
     int completionTime = computeCompletionTime(instance, permutation);
