@@ -7,6 +7,9 @@
 #include <chrono>
 #include <string>
 #include <climits>
+#include <iomanip> // pour setprecision
+
+
 
 using namespace std;
 
@@ -49,12 +52,18 @@ PFSPInstance readInstance(const string& filename) {
 }
 
 // Génération d'une permutation aléatoire
-vector<int> generateRandomPermutation(int n) {
+vector<int> generateRandomPermutation(int n, unsigned int seed = 0) {
     vector<int> permutation(n);
     for (int i = 0; i < n; ++i) {
         permutation[i] = i;
     }
-    shuffle(permutation.begin(), permutation.end(), default_random_engine(chrono::system_clock::now().time_since_epoch().count()));
+
+    if (seed == 0) {
+        // Graine aléatoire (basée sur l'horloge)
+        seed = chrono::system_clock::now().time_since_epoch().count();
+    }
+
+    shuffle(permutation.begin(), permutation.end(), default_random_engine(seed));
     return permutation;
 }
 
@@ -236,6 +245,8 @@ vector<int> localSearch_best_improvement(const PFSPInstance& instance, vector<in
 
 // Fonction principale pour tester la lecture et la génération
 int main(int argc, char* argv[]) {
+    unsigned int seed = 0;
+    bool saveResults = false;
     string pivoting_rule = "first";
     string neighborhood = "transpose";
     string init_method = "random";
@@ -252,6 +263,10 @@ int main(int argc, char* argv[]) {
         else if (arg == "--insert") neighborhood = "insert";
         else if (arg == "--random-init") init_method = "random";
         else if (arg == "--srz") init_method = "srz";
+        else if (arg.rfind("--seed=", 0) == 0) {
+            seed = stoi(arg.substr(7)); // extrait la valeur après --seed=
+        }
+        else if (arg == "--save") saveResults = true;
         else if (arg[0] != '-') filename = arg; // Si ce n’est pas une option, on suppose que c’est le fichier d’instance
     }
 
@@ -267,8 +282,11 @@ int main(int argc, char* argv[]) {
     cout << " - Pivotement : " << pivoting_rule << endl;
     cout << " - Voisinage : " << neighborhood << endl;
     cout << " - Méthode d'initialisation : " << init_method << endl;
+    cout << " - Graine : " << seed << endl;
 
-    PFSPInstance instance = readInstance(argv[1]);
+    //PFSPInstance instance = readInstance(argv[1]);
+    PFSPInstance instance = readInstance(filename);
+
 
     cout << "Instance chargée : " << instance.numJobs << " jobs, " << instance.numMachines << " machines." << endl;
 
@@ -282,25 +300,32 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    //// Print Permutation
-    //cout << "Permutation " << init_method << " : ";
-    //for (int job : permutation) {
-    //    cout << job << " ";
-    //}
-    //cout << endl;
-
+    // Local Search 
+    auto start = chrono::high_resolution_clock::now();  //Start timer
     if (pivoting_rule == "first") {
         permutation = localSearch_first_improvement(instance, permutation, neighborhood);
     } else if (pivoting_rule == "best") {
         permutation = localSearch_best_improvement(instance, permutation, neighborhood);
     }
-    
-    
-    
+    auto end = chrono::high_resolution_clock::now();    //End timer
+    chrono::duration<double> elapsed = end - start;
+    double elapsedTime = elapsed.count(); // en secondes
 
     // Calcul du temps d'achèvement
     int completionTime = computeCompletionTime(instance, permutation);
     cout << "Temps d'achèvement total : " << completionTime << endl;
+
+    if (saveResults) {  // Put all the results in a CSV file
+        ofstream fout("results.csv", ios::app); // mode append
+        fout << filename << ","
+             << instance.numJobs << ","
+             << pivoting_rule << ","
+             << neighborhood << ","
+             << init_method << ","
+             << seed << ","
+             << completionTime << ","
+             << fixed << setprecision(6) << elapsedTime << endl;
+    }
 
     return 0;
 }

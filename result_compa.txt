@@ -1,0 +1,274 @@
+> setwd("wilcoxon_q1")
+
+comparaisons <- c("first_insert", "first_exchange", "first_transpose",
+                  "best_insert", "best_exchange", "best_transpose")
+
+for (comp in comparaisons) {
+  cat("\n====", comp, "====\n")
+  data <- read.csv(paste0("wilcoxon_q1_", comp, ".csv"))
+  print(wilcox.test(data$random, data$srz, paired=TRUE))
+}
+
+==== first_insert ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$random and data$srz
+V = 41270, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== first_exchange ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$random and data$srz
+V = 1366.5, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== first_transpose ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$random and data$srz
+V = 45150, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== best_insert ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$random and data$srz
+V = 44054, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== best_exchange ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$random and data$srz
+V = 42122, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== best_transpose ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$random and data$srz
+V = 45150, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+
+
+
+
+
+
+
+
+
+> setwd("wilcoxon_q2")
+
+comparaisons <- c("insert_random", "exchange_random", "transpose_random",
+                  "insert_srz", "exchange_srz", "transpose_srz")
+
+for (comp in comparaisons) {
+  cat("\n====", comp, "====\n")
+  data <- read.csv(paste0("wilcoxon_q2_", comp, ".csv"))
+  print(wilcox.test(data$first, data$best, paired=TRUE))
+}
+
+==== insert_random ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$first and data$best
+V = 334896, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== exchange_random ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$first and data$best
+V = 3989.5, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== transpose_random ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$first and data$best
+V = 1487392, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== insert_srz ====
+
+        Wilcoxon signed rank exact test
+
+data:  data$first and data$best
+V = 51, p-value = 6.287e-05
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== exchange_srz ====
+
+        Wilcoxon signed rank exact test
+
+data:  data$first and data$best
+V = 42, p-value = 2.08e-05
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== transpose_srz ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  data$first and data$best
+V = 66, p-value = 0.03763
+alternative hypothesis: true location shift is not equal to 0
+
+Warning message:
+In wilcox.test.default(data$first, data$best, paired = TRUE) :
+  cannot compute exact p-value with zeroes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+> source("wilcoxon_q3.R")
+
+==== first_random_insert_vs_exchange ====
+Error in wilcox.test.default(x, y, paired = TRUE) :
+  not enough (non-missing) 'x' observations
+> source("wilcoxon_q3.R")
+
+==== wilcoxon_q3_best_random_exchange_vs_transpose.csv ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  x[keep] and y[keep]
+V = 0, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_best_random_insert_vs_exchange.csv ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  x[keep] and y[keep]
+V = 17208, p-value = 0.0003582
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_best_random_insert_vs_transpose.csv ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  x[keep] and y[keep]
+V = 0, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_best_srz_exchange_vs_transpose.csv ====
+
+        Wilcoxon signed rank exact test
+
+data:  x[keep] and y[keep]
+V = 0, p-value = 1.863e-09
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_best_srz_insert_vs_exchange.csv ====
+
+        Wilcoxon signed rank exact test
+
+data:  x[keep] and y[keep]
+V = 0, p-value = 1.863e-09
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_best_srz_insert_vs_transpose.csv ====
+
+        Wilcoxon signed rank exact test
+
+data:  x[keep] and y[keep]
+V = 0, p-value = 1.863e-09
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_first_random_exchange_vs_transpose.csv ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  x[keep] and y[keep]
+V = 0, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_first_random_insert_vs_exchange.csv ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  x[keep] and y[keep]
+V = 40328, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_first_random_insert_vs_transpose.csv ====
+
+        Wilcoxon signed rank test with continuity correction
+
+data:  x[keep] and y[keep]
+V = 0, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_first_srz_exchange_vs_transpose.csv ====
+
+        Wilcoxon signed rank exact test
+
+data:  x[keep] and y[keep]
+V = 0, p-value = 1.863e-09
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_first_srz_insert_vs_exchange.csv ====
+
+        Wilcoxon signed rank exact test
+
+data:  x[keep] and y[keep]
+V = 19, p-value = 5.718e-07
+alternative hypothesis: true location shift is not equal to 0
+
+
+==== wilcoxon_q3_first_srz_insert_vs_transpose.csv ====
+
+        Wilcoxon signed rank exact test
+
+data:  x[keep] and y[keep]
+V = 0, p-value = 1.863e-09
+alternative hypothesis: true location shift is not equal to 0
