@@ -242,14 +242,36 @@ vector<int> localSearch_best_improvement(const PFSPInstance& instance, vector<in
     return permutation;
 }
 
+// Fonction de recherche locale VND (Variable Neighborhood Descent)
+vector<int> localSearchVND(const PFSPInstance& instance, const vector<int>& initialSolution, const vector<string>& neighborhoods) {
+    vector<int> current = initialSolution;
+    bool improvement = true;
+
+    while (improvement) {
+        improvement = false;
+
+        for (const string& neigh : neighborhoods) {
+            vector<int> newSol = localSearch_first_improvement(instance, current, neigh);
+
+            if (computeCompletionTime(instance, newSol) < computeCompletionTime(instance, current)) {
+                current = newSol;
+                improvement = true;
+                break; // on retourne au début de la séquence des voisinages
+            }
+        }
+    }
+
+    return current;
+}
+
 
 // Fonction principale pour tester la lecture et la génération
 int main(int argc, char* argv[]) {
     unsigned int seed = 0;
     bool saveResults = false;
-    string pivoting_rule = "first";
-    string neighborhood = "transpose";
-    string init_method = "random";
+    string pivoting_rule = "";
+    string neighborhood = "";
+    string init_method = "";
     string filename = "";
 
     // Parcourir tous les arguments
@@ -258,6 +280,8 @@ int main(int argc, char* argv[]) {
 
         if (arg == "--first") pivoting_rule = "first";
         else if (arg == "--best") pivoting_rule = "best";
+        else if (arg == "--vnd1") pivoting_rule = "VND1";   // VND1 = transpose, exchange, insert
+        else if (arg == "--vnd2") pivoting_rule = "VND2";   // VND2 = transpose, insert, exchange
         else if (arg == "--transpose") neighborhood = "transpose";
         else if (arg == "--exchange") neighborhood = "exchange";
         else if (arg == "--insert") neighborhood = "insert";
@@ -268,6 +292,11 @@ int main(int argc, char* argv[]) {
         }
         else if (arg == "--save") saveResults = true;
         else if (arg[0] != '-') filename = arg; // Si ce n’est pas une option, on suppose que c’est le fichier d’instance
+
+        else {
+            cerr << "Erreur: Argument inconnu " << arg << endl;
+            return EXIT_FAILURE;
+        }
     }
 
     // Vérifier que le fichier a bien été spécifié
@@ -275,7 +304,7 @@ int main(int argc, char* argv[]) {
         cerr << "Erreur: Veuillez spécifier un fichier d'instance." << endl;
         return EXIT_FAILURE;
     }
-
+    
     // Afficher la configuration
     cout << "Configuration choisie : " << endl;
     cout << " - Fichier instance : " << filename << endl;
@@ -306,7 +335,14 @@ int main(int argc, char* argv[]) {
         permutation = localSearch_first_improvement(instance, permutation, neighborhood);
     } else if (pivoting_rule == "best") {
         permutation = localSearch_best_improvement(instance, permutation, neighborhood);
+    } else if (pivoting_rule == "VND1") {
+        vector<string> vnd1_order = {"transpose", "exchange", "insert"};
+        permutation = localSearchVND(instance, permutation, vnd1_order);
+    } else if (pivoting_rule == "VND2") {
+        vector<string> vnd2_order = {"transpose", "insert", "exchange"};
+        permutation = localSearchVND(instance, permutation, vnd2_order);
     }
+    
     auto end = chrono::high_resolution_clock::now();    //End timer
     chrono::duration<double> elapsed = end - start;
     double elapsedTime = elapsed.count(); // en secondes
@@ -316,7 +352,7 @@ int main(int argc, char* argv[]) {
     cout << "Temps d'achèvement total : " << completionTime << endl;
 
     if (saveResults) {  // Put all the results in a CSV file
-        ofstream fout("results.csv", ios::app); // mode append
+        ofstream fout("vnd_results.csv", ios::app); // mode append
         fout << filename << ","
              << instance.numJobs << ","
              << pivoting_rule << ","
