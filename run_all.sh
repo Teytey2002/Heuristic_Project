@@ -1,8 +1,8 @@
 #!/bin/bash
 
 EXEC=./pfsp
-INSTANCES_DIR=./instances/Benchmarks
-RESULTS=results.csv
+INSTANCES_DIR=./data/instances/Benchmarks
+RESULTS=./results/results.csv
 
 PIVOTS=("first" "best")
 NEIGHBORS=("transpose" "exchange" "insert")

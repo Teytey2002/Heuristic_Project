@@ -1,8 +1,8 @@
 #!/bin/bash
 
 EXEC=./pfsp
-INSTANCES_DIR=./instances/Benchmarks
-RESULTS=vnd_results.csv
+INSTANCES_DIR=./data/instances/Benchmarks
+RESULTS=./results/vnd_results.csv
 
 VNDS=("vnd1" "vnd2")  # VND1 = transpose→exchange→insert, VND2 = transpose→insert→exchange
 INIT="srz"

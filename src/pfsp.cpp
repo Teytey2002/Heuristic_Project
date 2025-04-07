@@ -352,7 +352,7 @@ int main(int argc, char* argv[]) {
     cout << "Temps d'achèvement total : " << completionTime << endl;
 
     if (saveResults) {  // Put all the results in a CSV file
-        ofstream fout("vnd_results.csv", ios::app); // mode append
+        ofstream fout("./results/resultscoucou.csv", ios::app); // mode append
         fout << filename << ","
              << instance.numJobs << ","
              << pivoting_rule << ","
